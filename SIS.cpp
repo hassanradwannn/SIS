@@ -46,6 +46,38 @@ int CourseCount = 0;
 Grade grades[MaxGrades];
 int GradeCount = 0;
 
+bool isIntegerString(string value) {
+    if (value.empty()) {
+        return false;
+    }
+    for (int i = 0; i < (int)value.size(); i++) {
+        if (!(value[i] >= '0' && value[i] <= '9')) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool isDecimalString(string value) {
+    if (value.empty()) {
+        return false;
+    }
+    bool decimalPointFound = false;
+    bool digitFound = false;
+    for (int i = 0; i < (int)value.size(); i++) {
+        if (value[i] >= '0' && value[i] <= '9') {
+            digitFound = true;
+        }
+        else if (value[i] == '.' && !decimalPointFound) {
+            decimalPointFound = true;
+        }
+        else {
+            return false;
+        }
+    }
+    return digitFound;
+}
+
 void saveStudents() {
     ofstream file("students.txt"); //CASE SENSITIVE OFFSTREAM OUTPUT FDILE STREAM OUTPUT INTO THE FILE
     if (!file.is_open()) {
@@ -73,24 +105,36 @@ void loadStudents() {
         // No file yet � that's fine on first run
         return;
     }
-    file >> StudentCount; //READS EVERYTHING AS A STRING (YENFA3 TAKHOD 8EIR STRING BS BETET3EMEL B FLE.IGNORE\N W HAYKOON FYHA MOSHKELA EN FILE MSH BEYE2RA SPACES
+    int savedStudentCount;
+    file >> savedStudentCount; //READS EVERYTHING AS A STRING (YENFA3 TAKHOD 8EIR STRING BS BETET3EMEL B FLE.IGNORE\N W HAYKOON FYHA MOSHKELA EN FILE MSH BEYE2RA SPACES
     file.ignore(); // consume the newline after the count IGNORE NEWLINE SPP IT DOESNT ENTER THE DOE BENE2RA MN FIKE BADAL CONSOLE
-    for (int i = 0; i < StudentCount; i++) {
-        getline(file, students[i].Name);
-        getline(file, students[i].ID);
-        getline(file, students[i].NationalID);
+    if (savedStudentCount < 0) {
+        cout << "Warning: invalid student count in students.txt\n";
+        return;
+    }
+    if (savedStudentCount > MaxStudents) {
+        savedStudentCount = MaxStudents;
+        cout << "Warning: students.txt has more students than the program can load\n";
+    }
+
+    StudentCount = 0;
+    for (int i = 0; i < savedStudentCount; i++) {
+        if (!getline(file, students[i].Name)) break;
+        if (!getline(file, students[i].ID)) break;
+        if (!getline(file, students[i].NationalID)) break;
         string genderStr; //mabye2drash yedakhal strings 3adi so we need to do that MSH 3AMLENHOM ALREADY STRINGS BS FILE INPUT BEYE2RA KOL 7AGA 3ALATOOL FA GETLINE MSH HAYE2RAHA
-        getline(file, genderStr);
+        if (!getline(file, genderStr)) break;
         students[i].Gender = genderStr.empty() ? 'M' : genderStr[0]; //IF NO GENDER ADDED ASSUME ITS A MALE ELSE KHOD AWEL WA7DA
-        getline(file, students[i].DOB);
-        getline(file, students[i].PhoneNumber);
-        getline(file, students[i].Program);
+        if (!getline(file, students[i].DOB)) break;
+        if (!getline(file, students[i].PhoneNumber)) break;
+        if (!getline(file, students[i].Program)) break;
         string levelStr;
-        getline(file, levelStr);
+        if (!getline(file, levelStr) || !isIntegerString(levelStr)) break;
         students[i].Level = stoi(levelStr); //STRING TO INTEGER LEVEL AS AN INTEGER
         string gpaStr;
-        getline(file, gpaStr);
+        if (!getline(file, gpaStr) || !isDecimalString(gpaStr)) break;
         students[i].GPA = stod(gpaStr); // STORE THE GPA AS FLOAT STRING TO DOUBLE
+        StudentCount++;
     }
     file.close();
     if (StudentCount > 0)
@@ -119,18 +163,30 @@ void loadGrades() {
     if (!file.is_open()) {
         return;
     }
-    file >> GradeCount;
+    int savedGradeCount;
+    file >> savedGradeCount;
     file.ignore();
-    for (int i = 0; i < GradeCount; i++) {
-        getline(file, grades[i].StudentID);
-        getline(file, grades[i].CourseCode);
+    if (savedGradeCount < 0) {
+        cout << "Warning: invalid grade count in grades.txt\n";
+        return;
+    }
+    if (savedGradeCount > MaxGrades) {
+        savedGradeCount = MaxGrades;
+        cout << "Warning: grades.txt has more grades than the program can load\n";
+    }
+
+    GradeCount = 0;
+    for (int i = 0; i < savedGradeCount; i++) {
+        if (!getline(file, grades[GradeCount].StudentID)) break;
+        if (!getline(file, grades[GradeCount].CourseCode)) break;
         string midtermStr, finalStr, totalStr;
-        getline(file, midtermStr);
-        getline(file, finalStr);
-        getline(file, totalStr);
-        grades[i].Midterm = stod(midtermStr);
-        grades[i].Final = stod(finalStr);
-        grades[i].Total = stod(totalStr);
+        if (!getline(file, midtermStr) || !isDecimalString(midtermStr)) break;
+        if (!getline(file, finalStr) || !isDecimalString(finalStr)) break;
+        if (!getline(file, totalStr) || !isDecimalString(totalStr)) break;
+        grades[GradeCount].Midterm = stod(midtermStr);
+        grades[GradeCount].Final = stod(finalStr);
+        grades[GradeCount].Total = stod(totalStr);
+        GradeCount++;
     }
     file.close();
     if (GradeCount > 0)
@@ -936,8 +992,9 @@ void generateTranscript() {
     }
     cout << "Courses Enrolled: " << courseCount << "/" << getMaxCourseLoad(students[indexstd].GPA) << endl;
 
+    const int transcriptTableWidth = 94;
     cout << (char)201;
-    for (int i = 0; i < 91; i++) cout << (char)205;
+    for (int i = 0; i < transcriptTableWidth; i++) cout << (char)205;
     cout << (char)187 << endl;
 
     cout << (char)186 << " " << left << setw(10) << "Code"
@@ -949,11 +1006,11 @@ void generateTranscript() {
         << " " << (char)186 << " " << setw(7) << "Credits" << " " << (char)186 << endl;
 
     cout << (char)204;
-    for (int i = 0; i < 91; i++) cout << (char)205;
+    for (int i = 0; i < transcriptTableWidth; i++) cout << (char)205;
     cout << (char)185 << endl;
 
     if (courseCount == 0) {
-        cout << (char)186 << " " << left << setw(90) << "No grades recorded for this student" << (char)186 << endl;
+        cout << (char)186 << " " << left << setw(transcriptTableWidth - 1) << "No grades recorded for this student" << (char)186 << endl;
     }
     else {
         for (int i = 0; i < GradeCount; i++) {
@@ -974,7 +1031,7 @@ void generateTranscript() {
     }
 
     cout << (char)200;
-    for (int i = 0; i < 91; i++) cout << (char)205;
+    for (int i = 0; i < transcriptTableWidth; i++) cout << (char)205;
     cout << (char)188 << endl;
     cout << "GPA: " << fixed << setprecision(2) << students[indexstd].GPA << endl;
 }

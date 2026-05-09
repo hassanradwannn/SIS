@@ -6,6 +6,9 @@
 using namespace std;
 
 const int MaxStudents = 200;
+const int MaxCourses = 50;
+const int MaxGrades = 500;
+
 int year = 2026;
 
 struct Student {
@@ -20,9 +23,28 @@ struct Student {
     double GPA;
 };
 
+struct Course {
+    string Code;
+    string Name;
+    int Credits;
+};
+
+struct Grade {
+    string StudentID;
+    string CourseCode;
+    double Midterm;
+    double Final;
+    double Total;
+};
+
 Student students[MaxStudents];
 int StudentCount = 0;
 
+Course courses[MaxCourses];
+int CourseCount = 0;
+
+Grade grades[MaxGrades];
+int GradeCount = 0;
 
 void saveStudents() {
     ofstream file("students.txt"); //CASE SENSITIVE OFFSTREAM OUTPUT FDILE STREAM OUTPUT INTO THE FILE
@@ -48,7 +70,7 @@ void saveStudents() {
 void loadStudents() {
     ifstream file("students.txt"); // INPUT TO THE FILE
     if (!file.is_open()) {
-        // No file yet — that's fine on first run
+        // No file yet ï¿½ that's fine on first run
         return;
     }
     file >> StudentCount; //READS EVERYTHING AS A STRING (YENFA3 TAKHOD 8EIR STRING BS BETET3EMEL B FLE.IGNORE\N W HAYKOON FYHA MOSHKELA EN FILE MSH BEYE2RA SPACES
@@ -75,6 +97,46 @@ void loadStudents() {
         cout << "Loaded " << StudentCount << " student(s) from students.txt\n";
 }
 
+void saveGrades() {
+    ofstream file("grades.txt");
+    if (!file.is_open()) {
+        cout << "Warning: could not open grades.txt for saving.\n";
+        return;
+    }
+    file << GradeCount << "\n";
+    for (int i = 0; i < GradeCount; i++) {
+        file << grades[i].StudentID << "\n";
+        file << grades[i].CourseCode << "\n";
+        file << grades[i].Midterm << "\n";
+        file << grades[i].Final << "\n";
+        file << grades[i].Total << "\n";
+    }
+    file.close();
+}
+
+void loadGrades() {
+    ifstream file("grades.txt");
+    if (!file.is_open()) {
+        return;
+    }
+    file >> GradeCount;
+    file.ignore();
+    for (int i = 0; i < GradeCount; i++) {
+        getline(file, grades[i].StudentID);
+        getline(file, grades[i].CourseCode);
+        string midtermStr, finalStr, totalStr;
+        getline(file, midtermStr);
+        getline(file, finalStr);
+        getline(file, totalStr);
+        grades[i].Midterm = stod(midtermStr);
+        grades[i].Final = stod(finalStr);
+        grades[i].Total = stod(totalStr);
+    }
+    file.close();
+    if (GradeCount > 0)
+        cout << "Loaded " << GradeCount << " grade(s) from grades.txt\n";
+}
+
 
 bool NameValidation(string Name) {
     int words = 0;
@@ -91,6 +153,13 @@ bool NameValidation(string Name) {
         }
     }
     return words == 2;
+}
+
+bool NegativeNumberValidation(string Number) {
+    if (!Number.empty() && Number[0] == '-') {
+        return false;
+    }
+    return true;
 }
 
 void printformat(const Student& s) {
@@ -130,6 +199,24 @@ string generateID(int year, int sequence) {
 
     id += to_string(sequence);
     return id;
+}
+
+bool validateID(string ID) {
+    if (ID.size() != 7) {
+        return false;
+    }
+    if (!(ID[0] >= '0' && ID[0] <= '9') || !(ID[1] >= '0' && ID[1] <= '9')) {
+        return false;
+    }
+    if (ID[2] != 'P') {
+        return false;
+    }
+    for (int i = 3; i < (int)ID.size(); i++) {
+        if (!(ID[i] >= '0' && ID[i] <= '9')) {
+            return false;
+        }
+    }
+    return true;
 }
 
 bool NatIDValidation(string NationalID) {
@@ -196,7 +283,7 @@ bool DOBValidation(string DOB) {
     }
     int day = (DOB[0] - '0') * 10 + (DOB[1] - '0');
     int month = (DOB[3] - '0') * 10 + (DOB[4] - '0');
-    int year = (DOB[6] - '0') * 1000 + (DOB[7] - '0') * 100 + (DOB[8] - '0') * 10 + (DOB[9] - '0');
+    int birthYear = (DOB[6] - '0') * 1000 + (DOB[7] - '0') * 100 + (DOB[8] - '0') * 10 + (DOB[9] - '0');
 
     if (month < 1 || month >12) {
         return false;
@@ -204,8 +291,15 @@ bool DOBValidation(string DOB) {
     if (day < 1 || day>31) {
         return false;
     }
+
     int currentYear = 2026;
-    if (currentYear - year < 17) {
+    int currentMonth = 5;
+    int currentDay = 9;
+    int age = currentYear - birthYear;
+    if (month > currentMonth || (month == currentMonth && day > currentDay)) {
+        age--;
+    }
+    if (age < 17) {
         return false;
     }
     return true;
@@ -246,6 +340,10 @@ void AddStudent() {
     while (true) {
         cout << "Enter National ID: ";
         getline(cin, s.NationalID);
+        if (!NegativeNumberValidation(s.NationalID)) {
+            cout << "You can't enter a negative number" << endl;
+            continue;
+        }
         if (!NatIDValidation(s.NationalID)) {
             cout << "The National ID must be 14 digits, with no leading zero" << endl;
             continue;
@@ -279,6 +377,10 @@ void AddStudent() {
     while (true) {
         cout << "Enter Phone Number: ";
         getline(cin, s.PhoneNumber);
+        if (!NegativeNumberValidation(s.PhoneNumber)) {
+            cout << "You can't enter a negative number" << endl;
+            continue;
+        }
         if (PhoneNOValidation(s.PhoneNumber)) {
             break;
         }
@@ -297,6 +399,14 @@ void AddStudent() {
     while (true) {
         cout << "Enter your Academic Level (1-4): ";
         getline(cin, input);
+        if (!NegativeNumberValidation(input)) {
+            cout << "You can't enter a negative number" << endl;
+            continue;
+        }
+        if (input.empty()) {
+            cout << "Level must be 1, 2, 3, or 4 " << endl;
+            continue;
+        }
         s.Level = input[0] - '0';
         if (s.Level >= 1 && s.Level <= 4) {
             break;
@@ -332,12 +442,20 @@ void searchStudent() {
         cout << "1. Search by ID\n2. Search by Name\n3. Search by NationalID\n4. Back\n\nEnter your choice: ";
         getline(cin, choiceInput);
 
+        if (!NegativeNumberValidation(choiceInput)) {
+            cout << "You can't enter a negative number" << endl;
+            continue;
+        }
         if (choiceInput.empty() || choiceInput == "4") return;
 
         switch (choiceInput[0]) {
         case '1':
             cout << "\nEnter ID: "; // Specific prompt
             getline(cin, SearchCriteria); // Only one input call
+            if (!validateID(SearchCriteria)) {
+                cout << "Invalid Student ID! Please enter a valid ID like 26P0001\n";
+                break;
+            }
             for (int i = 0; i < StudentCount; i++) {
                 if (students[i].ID == SearchCriteria) {
                     printformat(students[i]);
@@ -384,6 +502,10 @@ void searchStudent() {
             cout << "Enter National ID: ";
             getline(cin, SearchCriteria);
 
+            if (!NegativeNumberValidation(SearchCriteria)) {
+                cout << "You can't enter a negative number" << endl;
+                break;
+            }
             if (!NatIDValidation(SearchCriteria)) {
                 cout << "Invalid ID! Please Enter a valid ID\n";
                 break;
@@ -475,6 +597,571 @@ void sortByID(Student students[], int StudentCount) {
 void sortByGPA(Student students[], int StudentCount) {
 }
 
+int findByID(string ID) {
+    for (int i = 0; i < StudentCount; i++) {
+        if (students[i].ID == ID) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+bool validateCourseCode(string& CourseCode) {
+    if (CourseCode.size() != 6) {
+        return false;
+    }
+    for (int i = 0; i < 3; i++) {
+        if (!((CourseCode[i] >= 'A' && CourseCode[i] <= 'Z') || (CourseCode[i] >= 'a' && CourseCode[i] <= 'z'))) {
+            return false;
+        }
+        if (CourseCode[i] >= 'a' && CourseCode[i] <= 'z') {
+            CourseCode[i] = CourseCode[i] - 32;
+        }
+    }
+    for (int i = 3; i < 6; i++) {
+        if (!(CourseCode[i] >= '0' && CourseCode[i] <= '9')) {
+            return false;
+        }
+    }
+    return true;
+}
+
+int findByCourseCode(string CourseCode) {
+    for (int i = 0; i < CourseCount; i++) {
+        if (courses[i].Code == CourseCode) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int findGrade(string StudentID, string CourseCode) {
+    for (int i = 0; i < GradeCount; i++) {
+        if (grades[i].StudentID == StudentID && grades[i].CourseCode == CourseCode) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int countStudentCourses(string StudentID) {
+    int count = 0;
+    for (int i = 0; i < GradeCount; i++) {
+        if (grades[i].StudentID == StudentID) {
+            count++;
+        }
+    }
+    return count;
+}
+
+int getMaxCourseLoad(double GPA) {
+    if (GPA < 2.0) {
+        return 5;
+    }
+    return 8;
+}
+
+int inputNumberInRange(int start, int end) {
+    string input;
+    int value;
+    while (true) {
+        cout << "Enter your choice: ";
+        getline(cin, input);
+        if (!NegativeNumberValidation(input)) {
+            cout << "You can't enter a negative number" << endl;
+            continue;
+        }
+        if (input.empty()) {
+            cout << "Invalid choice, please enter a number" << endl;
+            continue;
+        }
+        bool digitsOnly = true;
+        for (int i = 0; i < (int)input.size(); i++) {
+            if (!(input[i] >= '0' && input[i] <= '9')) {
+                digitsOnly = false;
+                break;
+            }
+        }
+        if (!digitsOnly) {
+            cout << "Invalid choice, please enter a number" << endl;
+            continue;
+        }
+        value = stoi(input);
+        if (value < start || value > end) {
+            cout << "Invalid choice" << endl;
+            continue;
+        }
+        return value;
+    }
+}
+
+double getPoints(double total) {
+    if (total > 93) return 4.0;
+    if (total > 89) return 3.7;
+    if (total > 84) return 3.3;
+    if (total > 80) return 3.0;
+    if (total > 76) return 2.7;
+    if (total > 73) return 2.3;
+    if (total > 70) return 2.0;
+    if (total > 67) return 1.7;
+    if (total > 64) return 1.3;
+    if (total > 60) return 1.0;
+    return 0.0;
+}
+
+void enterGrades() {
+    if (StudentCount == 0) {
+        cout << "\nNo students registered yet." << endl;
+        return;
+    }
+    if (CourseCount == 0) {
+        cout << "\nNo courses available yet." << endl;
+        return;
+    }
+    if (GradeCount >= MaxGrades) {
+        cout << "The maximum number of grades has been reached" << endl;
+        return;
+    }
+
+    string studentID, courseCode;
+    int indexstd, indexcrs, indexgrd;
+    int midterm, finalExam;
+
+    cout << "\n=== Enter Grades ===" << endl;
+    while (true) {
+        cout << "Enter Student ID: ";
+        getline(cin, studentID);
+        if (!validateID(studentID)) {
+            cout << "Invalid Student ID! Please enter a valid ID like 26P0001" << endl;
+            continue;
+        }
+        indexstd = findByID(studentID);
+        if (indexstd == -1) {
+            cout << "Student Not Found" << endl;
+            continue;
+        }
+        break;
+    }
+
+    while (true) {
+        cout << "Enter Course Code: ";
+        getline(cin, courseCode);
+        if (!validateCourseCode(courseCode)) {
+            cout << "Course Code must be in form of LLLXXX, like CSE141" << endl;
+            continue;
+        }
+        indexcrs = findByCourseCode(courseCode);
+        if (indexcrs == -1) {
+            cout << "Course Not Found" << endl;
+            continue;
+        }
+        break;
+    }
+
+    indexgrd = findGrade(studentID, courseCode);
+    if (indexgrd == -1 && countStudentCourses(studentID) >= getMaxCourseLoad(students[indexstd].GPA)) {
+        cout << "Student cannot enroll in more than " << getMaxCourseLoad(students[indexstd].GPA) << " courses" << endl;
+        return;
+    }
+
+    cout << "Enter Midterm Exam Grade (0-40)" << endl;
+    midterm = inputNumberInRange(0, 40);
+    cout << "Enter Final Exam Grade (0-60)" << endl;
+    finalExam = inputNumberInRange(0, 60);
+
+    if (indexgrd == -1) {
+        grades[GradeCount].StudentID = studentID;
+        grades[GradeCount].CourseCode = courseCode;
+        grades[GradeCount].Midterm = midterm;
+        grades[GradeCount].Final = finalExam;
+        grades[GradeCount].Total = midterm + finalExam;
+        GradeCount++;
+    }
+    else {
+        grades[indexgrd].Midterm = midterm;
+        grades[indexgrd].Final = finalExam;
+        grades[indexgrd].Total = midterm + finalExam;
+    }
+
+    saveGrades();
+    cout << "Grades successfully added" << endl;
+}
+
+void updateGrade() {
+    if (GradeCount == 0) {
+        cout << "\nNo available grades" << endl;
+        return;
+    }
+
+    string studentID, courseCode;
+    int indexstd, indexcrs, indexgrd;
+
+    cout << "\n=== Update Grade ===" << endl;
+    cout << "Enter Student ID: ";
+    getline(cin, studentID);
+    if (!validateID(studentID)) {
+        cout << "Invalid Student ID! Please enter a valid ID like 26P0001" << endl;
+        return;
+    }
+    indexstd = findByID(studentID);
+    if (indexstd == -1) {
+        cout << "Student Not Found" << endl;
+        return;
+    }
+
+    cout << "Enter Course Code: ";
+    getline(cin, courseCode);
+    if (!validateCourseCode(courseCode)) {
+        cout << "Course Code must be in form of LLLXXX, like CSE141" << endl;
+        return;
+    }
+    indexcrs = findByCourseCode(courseCode);
+    if (indexcrs == -1) {
+        cout << "Course Not Found" << endl;
+        return;
+    }
+
+    indexgrd = findGrade(studentID, courseCode);
+    if (indexgrd == -1) {
+        cout << "This student is not enrolled in this course" << endl;
+        return;
+    }
+
+    cout << "Enter Midterm Exam Grade (0-40)" << endl;
+    grades[indexgrd].Midterm = inputNumberInRange(0, 40);
+    cout << "Enter Final Exam Grade (0-60)" << endl;
+    grades[indexgrd].Final = inputNumberInRange(0, 60);
+    grades[indexgrd].Total = grades[indexgrd].Midterm + grades[indexgrd].Final;
+
+    saveGrades();
+    cout << "Grade updated successfully" << endl;
+}
+
+void viewGrades() {
+    if (GradeCount == 0) {
+        cout << "\nNo available grades" << endl;
+        return;
+    }
+
+    cout << "\n=== View Grades ===" << endl;
+    for (int i = 0; i < GradeCount; i++) {
+        int studentIndex = findByID(grades[i].StudentID);
+        int courseIndex = findByCourseCode(grades[i].CourseCode);
+
+        cout << "Student: " << (studentIndex == -1 ? grades[i].StudentID : students[studentIndex].Name) << endl;
+        cout << "Course: " << (courseIndex == -1 ? grades[i].CourseCode : courses[courseIndex].Name) << endl;
+        cout << "Midterm Exam Grade: " << grades[i].Midterm << " | Final Exam Grade: " << grades[i].Final << endl;
+        cout << "Total Grade: " << grades[i].Total << endl << endl;
+    }
+}
+
+void calculateGPA() {
+    string studentID;
+    int indexstd;
+    double totalHours = 0.0;
+    double gpa = 0.0;
+
+    cout << "\n=== Calculate GPA ===" << endl;
+    while (true) {
+        cout << "Enter Student ID: ";
+        getline(cin, studentID);
+        if (!validateID(studentID)) {
+            cout << "Invalid Student ID! Please enter a valid ID like 26P0001" << endl;
+            continue;
+        }
+        indexstd = findByID(studentID);
+        if (indexstd == -1) {
+            cout << "Student Not Found" << endl;
+            continue;
+        }
+        break;
+    }
+
+    for (int i = 0; i < GradeCount; i++) {
+        if (grades[i].StudentID == studentID) {
+            int courseIndex = findByCourseCode(grades[i].CourseCode);
+            if (courseIndex != -1) {
+                totalHours += courses[courseIndex].Credits;
+                gpa += getPoints(grades[i].Total) * courses[courseIndex].Credits;
+            }
+        }
+    }
+
+    if (totalHours == 0) {
+        cout << "No graded courses found for this student" << endl;
+        return;
+    }
+
+    gpa = gpa / totalHours;
+    students[indexstd].GPA = gpa;
+    saveStudents();
+
+    cout << "Student: " << students[indexstd].Name << endl;
+    cout << "GPA: " << fixed << setprecision(2) << gpa << endl;
+}
+
+void generateTranscript() {
+    string studentID;
+    int indexstd;
+    int courseCount = 0;
+
+    cout << "\n=== Generate Transcript ===" << endl;
+    while (true) {
+        cout << "Enter Student ID: ";
+        getline(cin, studentID);
+        if (!validateID(studentID)) {
+            cout << "Invalid Student ID! Please enter a valid ID like 26P0001" << endl;
+            continue;
+        }
+        indexstd = findByID(studentID);
+        if (indexstd == -1) {
+            cout << "Student Not Found" << endl;
+            continue;
+        }
+        break;
+    }
+
+    for (int i = 0; i < GradeCount; i++) {
+        if (grades[i].StudentID == studentID) {
+            courseCount++;
+        }
+    }
+
+    cout << "\nTranscript for " << students[indexstd].Name << " (" << students[indexstd].ID << ")" << endl;
+    if (students[indexstd].GPA < 2.0) {
+        cout << "Load Status: Half load" << endl;
+    }
+    else {
+        cout << "Load Status: Full load" << endl;
+    }
+    cout << "Courses Enrolled: " << courseCount << "/" << getMaxCourseLoad(students[indexstd].GPA) << endl;
+
+    cout << (char)201;
+    for (int i = 0; i < 91; i++) cout << (char)205;
+    cout << (char)187 << endl;
+
+    cout << (char)186 << " " << left << setw(10) << "Code"
+        << " " << (char)186 << " " << setw(25) << "Course"
+        << " " << (char)186 << " " << setw(8) << "Midterm"
+        << " " << (char)186 << " " << setw(8) << "Final"
+        << " " << (char)186 << " " << setw(8) << "Total"
+        << " " << (char)186 << " " << setw(8) << "Points"
+        << " " << (char)186 << " " << setw(7) << "Credits" << " " << (char)186 << endl;
+
+    cout << (char)204;
+    for (int i = 0; i < 91; i++) cout << (char)205;
+    cout << (char)185 << endl;
+
+    if (courseCount == 0) {
+        cout << (char)186 << " " << left << setw(90) << "No grades recorded for this student" << (char)186 << endl;
+    }
+    else {
+        for (int i = 0; i < GradeCount; i++) {
+            if (grades[i].StudentID == studentID) {
+                int courseIndex = findByCourseCode(grades[i].CourseCode);
+                string courseName = courseIndex == -1 ? "Unknown Course" : courses[courseIndex].Name;
+                int credits = courseIndex == -1 ? 0 : courses[courseIndex].Credits;
+
+                cout << (char)186 << " " << left << setw(10) << grades[i].CourseCode
+                    << " " << (char)186 << " " << setw(25) << courseName
+                    << " " << (char)186 << " " << setw(8) << fixed << setprecision(1) << grades[i].Midterm
+                    << " " << (char)186 << " " << setw(8) << grades[i].Final
+                    << " " << (char)186 << " " << setw(8) << grades[i].Total
+                    << " " << (char)186 << " " << setw(8) << setprecision(2) << getPoints(grades[i].Total)
+                    << " " << (char)186 << " " << setw(7) << credits << " " << (char)186 << endl;
+            }
+        }
+    }
+
+    cout << (char)200;
+    for (int i = 0; i < 91; i++) cout << (char)205;
+    cout << (char)188 << endl;
+    cout << "GPA: " << fixed << setprecision(2) << students[indexstd].GPA << endl;
+}
+
+void updateStudent() {
+    if (StudentCount == 0) {
+        cout << "\nNo students registered yet." << endl;
+        return;
+    }
+
+    string id, input;
+    int index = -1;
+    int choice;
+
+    cout << "\n=== Update Student ===" << endl;
+    while (true) {
+        cout << "Enter Student ID: ";
+        getline(cin, id);
+
+        if (!validateID(id)) {
+            cout << "Invalid Student ID! Please enter a valid ID like 26P0001" << endl;
+            continue;
+        }
+
+        index = findByID(id);
+        if (index == -1) {
+            cout << "ID not found" << endl;
+            return;
+        }
+
+        printformat(students[index]);
+        break;
+    }
+
+    while (true) {
+        cout << "\n1. Name\n2. Phone Number\n3. Birth Date\n4. Gender\n5. Level\n6. Program\n0. Back" << endl;
+        cout << "Enter field you want to update: ";
+        getline(cin, input);
+
+        if (!NegativeNumberValidation(input)) {
+            cout << "You can't enter a negative number" << endl;
+            continue;
+        }
+        if (input.size() != 1 || input[0] < '0' || input[0] > '6') {
+            cout << "Please choose a number from 0 to 6" << endl;
+            continue;
+        }
+
+        choice = input[0] - '0';
+        if (choice == 0) {
+            break;
+        }
+
+        switch (choice) {
+        case 1:
+            while (true) {
+                cout << "Enter Student Name: ";
+                getline(cin, students[index].Name);
+                if (NameValidation(students[index].Name)) {
+                    cout << "Name updated successfully" << endl;
+                    break;
+                }
+                cout << "Name must be exactly 2 words (first and last name)" << endl;
+            }
+            break;
+
+        case 2:
+            while (true) {
+                cout << "Enter Phone Number: ";
+                getline(cin, students[index].PhoneNumber);
+                if (!NegativeNumberValidation(students[index].PhoneNumber)) {
+                    cout << "You can't enter a negative number" << endl;
+                    continue;
+                }
+                if (PhoneNOValidation(students[index].PhoneNumber)) {
+                    cout << "Phone number updated successfully" << endl;
+                    break;
+                }
+                cout << "The phone number must be 11 digits starting with 01" << endl;
+            }
+            break;
+
+        case 3:
+            while (true) {
+                cout << "Enter Date of Birth (DD/MM/YYYY): ";
+                getline(cin, students[index].DOB);
+                if (DOBValidation(students[index].DOB)) {
+                    cout << "Birth date updated successfully" << endl;
+                    break;
+                }
+                cout << "Invalid date or Age (the student must be 17 or older)" << endl;
+            }
+            break;
+
+        case 4:
+            while (true) {
+                cout << "Enter the Gender (M/F): ";
+                getline(cin, input);
+                if (input.size() == 1 && GenderValidation(input[0])) {
+                    students[index].Gender = input[0];
+                    cout << "Gender updated successfully" << endl;
+                    break;
+                }
+                cout << "Gender must be M or F" << endl;
+            }
+            break;
+
+        case 5:
+            while (true) {
+                cout << "Enter your Academic Level (1-4): ";
+                getline(cin, input);
+                if (!NegativeNumberValidation(input)) {
+                    cout << "You can't enter a negative number" << endl;
+                    continue;
+                }
+                if (input.size() == 1 && input[0] >= '1' && input[0] <= '4') {
+                    students[index].Level = input[0] - '0';
+                    cout << "Level updated successfully" << endl;
+                    break;
+                }
+                cout << "Level must be 1, 2, 3, or 4" << endl;
+            }
+            break;
+
+        case 6:
+            while (true) {
+                cout << "Enter Your Program (CSE/CCE/MCT): ";
+                getline(cin, students[index].Program);
+                if (ProgramValidation(students[index].Program)) {
+                    cout << "Program updated successfully" << endl;
+                    break;
+                }
+                cout << "Program must be CSE, CCE, or MCT" << endl;
+            }
+            break;
+        }
+
+        saveStudents();
+    }
+}
+
+void deleteStudent() {
+    if (StudentCount == 0) {
+        cout << "\nNo students registered yet." << endl;
+        return;
+    }
+
+    string id, input;
+    int index;
+
+    cout << "\n=== Delete Student ===" << endl;
+    while (true) {
+        cout << "Enter Student ID: ";
+        getline(cin, id);
+
+        if (!validateID(id)) {
+            cout << "Invalid Student ID! Please enter a valid ID like 26P0001" << endl;
+            continue;
+        }
+
+        index = findByID(id);
+        if (index == -1) {
+            cout << "ID not found" << endl;
+            return;
+        }
+        break;
+    }
+
+    cout << "Confirm deleting student: " << students[index].Name << endl;
+    cout << "1. Yes\n2. No" << endl;
+    cout << "Enter your choice: ";
+    getline(cin, input);
+
+    if (!NegativeNumberValidation(input)) {
+        cout << "You can't enter a negative number" << endl;
+        return;
+    }
+    if (input == "1") {
+        for (int i = index; i < StudentCount - 1; i++) {
+            students[i] = students[i + 1];
+        }
+        StudentCount--;
+        saveStudents();
+        cout << "Successfully deleted" << endl;
+    }
+}
+
 
 void listAllStudents() {
     int choice;
@@ -483,6 +1170,10 @@ void listAllStudents() {
     cout << "Sort by:\n1. Student ID\n2. Name (A - Z)\n3. GPA (Highest First)\n4. Back" << endl;
     cout << "\nEnter your choice: ";
     getline(cin, choiceinput);
+    if (!NegativeNumberValidation(choiceinput)) {
+        cout << "You can't enter a negative number" << endl;
+        return;
+    }
     if (choiceinput.empty()) return;
     choice = choiceinput[0] - '0';
     switch (choice) {
@@ -504,6 +1195,14 @@ void studentManagement() {
         cout << "\n1. Add Student\n2. Search Student\n3. Update Student\n4. Delete Student\n5. List All Students\n6. Back to Main Menu\n\n";
         cout << "Enter your choice: ";
         getline(cin, choiceInput);
+        if (!NegativeNumberValidation(choiceInput)) {
+            cout << "You can't enter a negative number" << endl;
+            continue;
+        }
+        if (choiceInput.empty()) {
+            cout << "Please choose a number from 1 to 6";
+            continue;
+        }
         choice = choiceInput[0] - '0';
         switch (choice) {
         case 1:
@@ -512,9 +1211,9 @@ void studentManagement() {
         case 2:
             searchStudent(); break;
         case 3:
-            cout << "Milestone 2!"; break;
+            updateStudent(); break;
         case 4:
-            cout << "Milestone 2!"; break;
+            deleteStudent(); break;
         case 5:
             listAllStudents(); break;
         case 6: return;
@@ -527,10 +1226,54 @@ void studentManagement() {
 
 }
 
+void gradesManagement() {
+    int choice;
+    string choiceInput;
+    while (true) {
+        cout << "\n=== Grades Management ===";
+        cout << "\n1. Enter Grades\n2. Update Grade\n3. View Grades\n4. Calculate GPA\n5. Generate Transcript\n6. Back to Main Menu\n\n";
+        cout << "Enter your choice: ";
+        getline(cin, choiceInput);
+        if (!NegativeNumberValidation(choiceInput)) {
+            cout << "You can't enter a negative number" << endl;
+            continue;
+        }
+        if (choiceInput.empty()) {
+            cout << "Please choose a number from 1 to 6";
+            continue;
+        }
+
+        choice = choiceInput[0] - '0';
+        switch (choice) {
+        case 1:
+            enterGrades();
+            break;
+        case 2:
+            updateGrade();
+            break;
+        case 3:
+            viewGrades();
+            break;
+        case 4:
+            calculateGPA();
+            break;
+        case 5:
+            generateTranscript();
+            break;
+        case 6:
+            return;
+        default:
+            cout << "Please choose a number from 1 to 6";
+            break;
+        }
+    }
+}
+
 
 int main() {
 
     loadStudents(); // <-- auto-load saved students on startup
+    loadGrades();
 
     cout << char(201);
     for (int i = 0; i < 36; i++) {
@@ -556,6 +1299,14 @@ int main() {
         cout << "4. Exit" << endl;
         cout << "\nEnter your choice: ";
         getline(cin, ChoiceInput);
+        if (!NegativeNumberValidation(ChoiceInput)) {
+            cout << "You can't enter a negative number" << endl;
+            continue;
+        }
+        if (ChoiceInput.empty()) {
+            cout << "Please choose a number from 1 to 4\n\n";
+            continue;
+        }
         choice = ChoiceInput[0] - '0';
 
         switch (choice) {
@@ -566,7 +1317,7 @@ int main() {
             cout << "Milestone 2" << endl;
             break;
         case 3:
-            cout << "Milestone 2" << endl;
+            gradesManagement();
             break;
         case 4:
             cout << "Goodbye! " << endl;

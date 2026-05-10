@@ -193,6 +193,52 @@ void loadGrades() {
         cout << "Loaded " << GradeCount << " grade(s) from grades.txt\n";
 }
 
+void saveCourses() {
+    ofstream file("courses.txt");
+    if (!file.is_open()) {
+        cout << "Warning: could not open courses.txt for saving.\n";
+        return;
+    }
+    file << CourseCount << "\n";
+    for (int i = 0; i < CourseCount; i++) {
+        file << courses[i].Code << "\n";
+        file << courses[i].Name << "\n";
+        file << courses[i].Credits << "\n";
+    }
+    file.close();
+}
+
+void loadCourses() {
+    ifstream file("courses.txt");
+    if (!file.is_open()) {
+        return;
+    }
+    int savedCourseCount;
+    file >> savedCourseCount;
+    file.ignore();
+    if (savedCourseCount < 0) {
+        cout << "Warning: invalid course count in courses.txt\n";
+        return;
+    }
+    if (savedCourseCount > MaxCourses) {
+        savedCourseCount = MaxCourses;
+        cout << "Warning: courses.txt has more courses than the program can load\n";
+    }
+
+    CourseCount = 0;
+    for (int i = 0; i < savedCourseCount; i++) {
+        if (!getline(file, courses[i].Code)) break;
+        if (!getline(file, courses[i].Name)) break;
+        string creditsStr;
+        if (!getline(file, creditsStr) || !isIntegerString(creditsStr)) break;
+        courses[i].Credits = stoi(creditsStr);
+        CourseCount++;
+    }
+    file.close();
+    if (CourseCount > 0)
+        cout << "Loaded " << CourseCount << " course(s) from courses.txt\n";
+}
+
 
 bool NameValidation(string Name) {
     int words = 0;
@@ -651,6 +697,16 @@ void sortByID(Student students[], int StudentCount) {
     displayStudentTable(students, StudentCount);
 }
 void sortByGPA(Student students[], int StudentCount) {
+    for (int i = 0; i < StudentCount - 1; i++) {
+        for (int j = 0; j < StudentCount - i - 1; j++) {
+            if (students[j].GPA < students[j + 1].GPA) {
+                Student temp = students[j];
+                students[j] = students[j + 1];
+                students[j + 1] = temp;
+            }
+        }
+    }
+    displayStudentTable(students, StudentCount);
 }
 
 int findByID(string ID) {
@@ -682,6 +738,10 @@ bool validateCourseCode(string& CourseCode) {
     return true;
 }
 
+bool validateCourseCredits(int credits) {
+    return credits >= 2 && credits <= 4;
+}
+
 int findByCourseCode(string CourseCode) {
     for (int i = 0; i < CourseCount; i++) {
         if (courses[i].Code == CourseCode) {
@@ -689,6 +749,13 @@ int findByCourseCode(string CourseCode) {
         }
     }
     return -1;
+}
+
+bool uniqueCourseCode(string Code) {
+    for (int i = 0; i < CourseCount; i++)
+        if (courses[i].Code == Code)
+            return false;
+    return true;
 }
 
 int findGrade(string StudentID, string CourseCode) {
@@ -748,6 +815,212 @@ int inputNumberInRange(int start, int end) {
             continue;
         }
         return value;
+    }
+}
+
+void addCourse() {
+    cout << "\n=== Add Course ===" << endl;
+    if (CourseCount >= MaxCourses) {
+        cout << "The maximum number of courses has been reached ";
+        return;
+    }
+
+    Course c;
+
+    while (true) {
+        cout << "Enter Course Code: ";
+        getline(cin, c.Code);
+        if (!validateCourseCode(c.Code)) {
+            cout << "Course Code must be in form of LLLXXX, like CSE141" << endl;
+            continue;
+        }
+        if (!uniqueCourseCode(c.Code)) {
+            cout << "This Course Code already exists" << endl;
+            continue;
+        }
+        break;
+    }
+
+    while (true) {
+        cout << "Enter Course Name: ";
+        getline(cin, c.Name);
+        if (!c.Name.empty()) {
+            break;
+        }
+        cout << "Course Name cannot be empty" << endl;
+    }
+
+    cout << "Enter Credits (2-4)" << endl;
+    c.Credits = inputNumberInRange(2, 4);
+
+    courses[CourseCount] = c;
+    CourseCount++;
+
+    saveCourses();
+
+    cout << "\nCourse added successfully!\n";
+    cout << "Course Code: " << c.Code << endl;
+    cout << "Course Name: " << c.Name << endl;
+}
+
+void viewCourses() {
+    if (CourseCount == 0) {
+        cout << "No courses available" << endl;
+        return;
+    }
+
+    cout << "\nTotal Courses: " << CourseCount << endl;
+    cout << (char)201;
+    for (int i = 0; i < 50; i++) cout << (char)205;
+    cout << (char)187 << endl;
+
+    cout << (char)186 << " " << left << setw(10) << "Code"
+        << " " << (char)186 << " " << setw(25) << "Name"
+        << " " << (char)186 << " " << setw(8) << "Credits" << (char)186 << endl;
+
+    cout << (char)204;
+    for (int i = 0; i < 50; i++) cout << (char)205;
+    cout << (char)185 << endl;
+
+    for (int i = 0; i < CourseCount; i++) {
+        string courseCode = courses[i].Code;
+        string courseName = courses[i].Name;
+        string courseCredits = to_string(courses[i].Credits);
+        if (courseCode.size() > 10) courseCode = courseCode.substr(0, 10);
+        if (courseName.size() > 25) courseName = courseName.substr(0, 25);
+        if (courseCredits.size() > 8) courseCredits = courseCredits.substr(0, 8);
+        cout << (char)186 << " " << left << setw(10) << courseCode
+            << " " << (char)186 << " " << setw(25) << courseName
+            << " " << (char)186 << " " << setw(8) << courseCredits << (char)186 << endl;
+    }
+
+    cout << (char)200;
+    for (int i = 0; i < 50; i++) cout << (char)205;
+    cout << (char)188 << endl;
+}
+
+void updateCourse() {
+    if (CourseCount == 0) {
+        cout << "\nNo courses available" << endl;
+        return;
+    }
+
+    string Code, input;
+    int indexcrs = -1;
+    int choice;
+
+    cout << "\n=== Update Course ===" << endl;
+    while (true) {
+        cout << "Enter Course Code: ";
+        getline(cin, Code);
+
+        if (!validateCourseCode(Code)) {
+            cout << "Course Code must be in form of LLLXXX, like CSE141" << endl;
+            continue;
+        }
+
+        indexcrs = findByCourseCode(Code);
+        if (indexcrs == -1) {
+            cout << "Course Not Found" << endl;
+            return;
+        }
+
+        break;
+    }
+
+    while (true) {
+        cout << "\n1. Course Name\n2. Credits\n0. Back" << endl;
+        cout << "Enter field you want to update: ";
+        getline(cin, input);
+
+        if (!NegativeNumberValidation(input)) {
+            cout << "You can't enter a negative number" << endl;
+            continue;
+        }
+        if (input.size() != 1 || input[0] < '0' || input[0] > '2') {
+            cout << "Please choose a number from 0 to 2" << endl;
+            continue;
+        }
+
+        choice = input[0] - '0';
+        if (choice == 0) {
+            break;
+        }
+
+        switch (choice) {
+        case 1:
+            while (true) {
+                cout << "Enter Course Name: ";
+                getline(cin, courses[indexcrs].Name);
+                if (!courses[indexcrs].Name.empty()) {
+                    cout << "Course name updated successfully" << endl;
+                    break;
+                }
+                cout << "Course Name cannot be empty" << endl;
+            }
+            break;
+
+        case 2:
+            cout << "Enter Credits (2-4)" << endl;
+            courses[indexcrs].Credits = inputNumberInRange(2, 4);
+            cout << "Credits updated successfully" << endl;
+            break;
+        }
+
+        saveCourses();
+    }
+}
+
+void deleteCourse() {
+    if (CourseCount == 0) {
+        cout << "\nNo courses available" << endl;
+        return;
+    }
+
+    string Code, input;
+    int indexcrs;
+
+    cout << "\n=== Delete Course ===" << endl;
+    while (true) {
+        cout << "Enter Course Code: ";
+        getline(cin, Code);
+
+        if (!validateCourseCode(Code)) {
+            cout << "Course Code must be in form of LLLXXX, like CSE141" << endl;
+            continue;
+        }
+
+        indexcrs = findByCourseCode(Code);
+        if (indexcrs == -1) {
+            cout << "Course Not Found" << endl;
+            return;
+        }
+        break;
+    }
+
+    for (int i = 0; i < GradeCount; i++) {
+        if (grades[i].CourseCode == Code) {
+            cout << "Cannot delete: this course has grades recorded" << endl;
+            return;
+        }
+    }
+
+    cout << "Confirm deleting course: " << courses[indexcrs].Name << endl;
+    cout << "1. Yes\n2. No" << endl;
+    cout << "Enter your choice: ";
+    getline(cin, input);
+
+    if (!NegativeNumberValidation(input)) {
+        cout << "You can't enter a negative number" << endl;
+        return;
+    }
+    if (input == "1") {
+        for (int i = indexcrs; i < CourseCount - 1; i++) {
+            courses[i] = courses[i + 1];
+        }
+        CourseCount--;
+        saveCourses();
+        cout << "Successfully deleted" << endl;
     }
 }
 
@@ -960,6 +1233,9 @@ void generateTranscript() {
     string studentID;
     int indexstd;
     int courseCount = 0;
+    double totalHours = 0.0;
+    double gpa = 0.0;
+     
 
     cout << "\n=== Generate Transcript ===" << endl;
     while (true) {
@@ -976,7 +1252,24 @@ void generateTranscript() {
         }
         break;
     }
+    for (int i = 0; i < GradeCount; i++) {
+        if (grades[i].StudentID == studentID) {
+            int courseIndex = findByCourseCode(grades[i].CourseCode);
+            if (courseIndex != -1) {
+                totalHours += courses[courseIndex].Credits;
+                gpa += getPoints(grades[i].Total) * courses[courseIndex].Credits;
+            }
+        }
+    }
 
+    if (totalHours == 0) {
+        cout << "No graded courses found for this student" << endl;
+        return;
+    }
+
+    gpa = gpa / totalHours;
+    students[indexstd].GPA = gpa;
+    saveStudents(); // aashan maygesh GPA zero, ruins the load status w max courses
     for (int i = 0; i < GradeCount; i++) {
         if (grades[i].StudentID == studentID) {
             courseCount++;
@@ -1283,6 +1576,45 @@ void studentManagement() {
 
 }
 
+void courseManagement() {
+    int choice;
+    string choiceInput;
+    while (true) {
+        cout << "\n=== Course Management ===";
+        cout << "\n1. Add Course\n2. View Courses\n3. Update Course\n4. Delete Course\n5. Back to Main Menu\n\n";
+        cout << "Enter your choice: ";
+        getline(cin, choiceInput);
+        if (!NegativeNumberValidation(choiceInput)) {
+            cout << "You can't enter a negative number" << endl;
+            continue;
+        }
+        if (choiceInput.empty()) {
+            cout << "Please choose a number from 1 to 5";
+            continue;
+        }
+        choice = choiceInput[0] - '0';
+        switch (choice) {
+        case 1:
+            addCourse();
+            break;
+        case 2:
+            viewCourses();
+            break;
+        case 3:
+            updateCourse();
+            break;
+        case 4:
+            deleteCourse();
+            break;
+        case 5:
+            return;
+        default:
+            cout << "Please choose a number from 1 to 5";
+            break;
+        }
+    }
+}
+
 void gradesManagement() {
     int choice;
     string choiceInput;
@@ -1331,6 +1663,7 @@ int main() {
 
     loadStudents(); // <-- auto-load saved students on startup
     loadGrades();
+    loadCourses();
 
     cout << char(201);
     for (int i = 0; i < 36; i++) {
@@ -1371,7 +1704,7 @@ int main() {
             studentManagement();
             break;
         case 2:
-            cout << "Milestone 2" << endl;
+            courseManagement();
             break;
         case 3:
             gradesManagement();

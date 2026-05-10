@@ -37,6 +37,13 @@ struct Grade {
     double Total;
 };
 
+struct User {
+    string Username;
+    string Password;
+    string StudentID;
+    bool isAdmin;
+};
+
 Student students[MaxStudents];
 int StudentCount = 0;
 
@@ -45,6 +52,11 @@ int CourseCount = 0;
 
 Grade grades[MaxGrades];
 int GradeCount = 0;
+
+User users[MaxStudents + 1];
+int UserCount = 0;
+
+string loggedInStudentID = "";
 
 bool isIntegerString(string value) {
     if (value.empty()) {
@@ -239,6 +251,89 @@ void loadCourses() {
         cout << "Loaded " << CourseCount << " course(s) from courses.txt\n";
 }
 
+void saveUsers() {
+    ofstream file("authenticator.txt");
+    if (!file.is_open()) {
+        cout << "Warning: could not open authenticator.txt for saving.\n";
+        return;
+    }
+    file << UserCount << "\n";
+    for (int i = 0; i < UserCount; i++) {
+        file << users[i].Username << "\n";
+        file << users[i].Password << "\n";
+        file << users[i].StudentID << "\n";
+        file << (users[i].isAdmin ? "1" : "0") << "\n";
+    }
+    file.close();
+}
+
+void loadUsers() {
+    ifstream file("authenticator.txt");
+    if (!file.is_open()) {
+        users[0].Username = "admin";
+        users[0].Password = "Admin@123";
+        users[0].StudentID = "";
+        users[0].isAdmin = true;
+        UserCount = 1;
+        saveUsers();
+        return;
+    }
+    int savedUserCount;
+    if (!(file >> savedUserCount)) {
+        file.close();
+        users[0].Username = "admin";
+        users[0].Password = "Admin@123";
+        users[0].StudentID = "";
+        users[0].isAdmin = true;
+        UserCount = 1;
+        saveUsers();
+        return;
+    }
+    file.ignore();
+    if (savedUserCount < 0) {
+        file.close();
+        users[0].Username = "admin";
+        users[0].Password = "Admin@123";
+        users[0].StudentID = "";
+        users[0].isAdmin = true;
+        UserCount = 1;
+        saveUsers();
+        return;
+    }
+    if (savedUserCount > MaxStudents + 1) {
+        savedUserCount = MaxStudents + 1;
+        cout << "Warning: authenticator.txt has more users than the program can load\n";
+    }
+
+    UserCount = 0;
+    for (int i = 0; i < savedUserCount; i++) {
+        if (!getline(file, users[i].Username)) break;
+        if (!getline(file, users[i].Password)) break;
+        if (!getline(file, users[i].StudentID)) break;
+        string isAdminStr;
+        if (!getline(file, isAdminStr)) break;
+        users[i].isAdmin = (isAdminStr == "1");
+        UserCount++;
+    }
+    file.close();
+    bool adminFound = false;
+    for (int i = 0; i < UserCount; i++) {
+        if (users[i].Username == "admin") {
+            adminFound = true;
+        }
+    }
+    if (!adminFound && UserCount < MaxStudents + 1) {
+        users[UserCount].Username = "admin";
+        users[UserCount].Password = "Admin@123";
+        users[UserCount].StudentID = "";
+        users[UserCount].isAdmin = true;
+        UserCount++;
+        saveUsers();
+    }
+    if (UserCount > 0)
+        cout << "Loaded " << UserCount << " user(s) from authenticator.txt\n";
+}
+
 
 bool NameValidation(string Name) {
     int words = 0;
@@ -262,6 +357,24 @@ bool NegativeNumberValidation(string Number) {
         return false;
     }
     return true;
+}
+
+bool validatePassword(string Password) {
+    bool hasUppercase = false;
+    bool hasDigit = false;
+
+    if (Password.size() <= 8) {
+        return false;
+    }
+    for (int i = 0; i < (int)Password.size(); i++) {
+        if (Password[i] >= 'A' && Password[i] <= 'Z') {
+            hasUppercase = true;
+        }
+        if (Password[i] >= '0' && Password[i] <= '9') {
+            hasDigit = true;
+        }
+    }
+    return hasUppercase && hasDigit;
 }
 
 void printformat(const Student& s) {
@@ -718,6 +831,15 @@ int findByID(string ID) {
     return -1;
 }
 
+int findUserByUsername(string Username) {
+    for (int i = 0; i < UserCount; i++) {
+        if (users[i].Username == Username) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 bool validateCourseCode(string& CourseCode) {
     if (CourseCode.size() != 6) {
         return false;
@@ -778,7 +900,7 @@ int countStudentCourses(string StudentID) {
 }
 
 int getMaxCourseLoad(double GPA) {
-    if (GPA < 2.0) {
+    if (GPA > 0.0 && GPA < 2.0) {
         return 5;
     }
     return 8;
@@ -1238,19 +1360,29 @@ void generateTranscript() {
      
 
     cout << "\n=== Generate Transcript ===" << endl;
-    while (true) {
-        cout << "Enter Student ID: ";
-        getline(cin, studentID);
-        if (!validateID(studentID)) {
-            cout << "Invalid Student ID! Please enter a valid ID like 26P0001" << endl;
-            continue;
-        }
+    if (!loggedInStudentID.empty()) {
+        studentID = loggedInStudentID;
         indexstd = findByID(studentID);
         if (indexstd == -1) {
             cout << "Student Not Found" << endl;
-            continue;
+            return;
         }
-        break;
+    }
+    else {
+        while (true) {
+            cout << "Enter Student ID: ";
+            getline(cin, studentID);
+            if (!validateID(studentID)) {
+                cout << "Invalid Student ID! Please enter a valid ID like 26P0001" << endl;
+                continue;
+            }
+            indexstd = findByID(studentID);
+            if (indexstd == -1) {
+                cout << "Student Not Found" << endl;
+                continue;
+            }
+            break;
+        }
     }
     for (int i = 0; i < GradeCount; i++) {
         if (grades[i].StudentID == studentID) {
@@ -1277,7 +1409,7 @@ void generateTranscript() {
     }
 
     cout << "\nTranscript for " << students[indexstd].Name << " (" << students[indexstd].ID << ")" << endl;
-    if (students[indexstd].GPA < 2.0) {
+    if (students[indexstd].GPA != 0.0 && students[indexstd].GPA < 2.0) {
         cout << "Load Status: Half load" << endl;
     }
     else {
@@ -1341,23 +1473,34 @@ void updateStudent() {
     int choice;
 
     cout << "\n=== Update Student ===" << endl;
-    while (true) {
-        cout << "Enter Student ID: ";
-        getline(cin, id);
-
-        if (!validateID(id)) {
-            cout << "Invalid Student ID! Please enter a valid ID like 26P0001" << endl;
-            continue;
-        }
-
+    if (!loggedInStudentID.empty()) { // check first law fy student logged in, if so dont prompt to input ID
+        id = loggedInStudentID;
         index = findByID(id);
         if (index == -1) {
-            cout << "ID not found" << endl;
+            cout << "Student Not Found" << endl;
             return;
         }
-
         printformat(students[index]);
-        break;
+    }
+    else { // if admin logged in, no global student logged in ID, prompt to manual entry
+        while (true) {
+            cout << "Enter Student ID: ";
+            getline(cin, id);
+
+            if (!validateID(id)) {
+                cout << "Invalid Student ID! Please enter a valid ID like 26P0001" << endl;
+                continue;
+            }
+
+            index = findByID(id);
+            if (index == -1) {
+                cout << "ID not found" << endl;
+                return;
+            }
+
+            printformat(students[index]);
+            break;
+        }
     }
 
     while (true) {
@@ -1659,12 +1802,235 @@ void gradesManagement() {
     }
 }
 
+void enrollCourse(string studentID) {
+    string courseCode;
+    int indexstd, indexcrs, indexgrd;
+    int maxCourseLoad, currentCourseCount;
+
+    cout << "\n=== Enroll in Course ===" << endl;
+    if (CourseCount == 0) {
+        cout << "No courses available" << endl;
+        return;
+    }
+    if (GradeCount >= MaxGrades) {
+        cout << "The maximum number of grades has been reached" << endl;
+        return;
+    }
+    indexstd = findByID(studentID);
+    if (indexstd == -1) {
+        cout << "Student Not Found" << endl;
+        return;
+    }
+
+    maxCourseLoad = getMaxCourseLoad(students[indexstd].GPA);
+    currentCourseCount = countStudentCourses(studentID);
+    if (currentCourseCount >= maxCourseLoad) {
+        cout << "You have reached your maximum course load of " << maxCourseLoad << " courses" << endl;
+        return;
+    }
+
+    viewCourses();
+    while (true) {
+        cout << "Enter Course Code: ";
+        getline(cin, courseCode);
+        if (!validateCourseCode(courseCode)) {
+            cout << "Course Code must be in form of LLLXXX, like CSE141" << endl;
+            continue;
+        }
+        indexcrs = findByCourseCode(courseCode);
+        if (indexcrs == -1) {
+            cout << "Course Not Found" << endl;
+            continue;
+        }
+        break;
+    }
+
+    indexgrd = findGrade(studentID, courseCode);
+    if (indexgrd != -1) {
+        cout << "You are already enrolled in this course" << endl;
+        return;
+    }
+
+    grades[GradeCount].StudentID = studentID;
+    grades[GradeCount].CourseCode = courseCode;
+    grades[GradeCount].Midterm = 0;
+    grades[GradeCount].Final = 0;
+    grades[GradeCount].Total = 0;
+    GradeCount++;
+    saveGrades();
+    cout << "Successfully enrolled in " << courses[indexcrs].Name << endl;
+}
+
+void studentMenu(string studentID) {
+    int choice;
+    string choiceInput;
+    int indexstd;
+
+    indexstd = findByID(studentID);
+    if (indexstd == -1) {
+        cout << "Student Not Found" << endl;
+        return;
+    }
+
+    loggedInStudentID = studentID;
+    cout << "\n=== Welcome, " << students[indexstd].Name << " ===" << endl;
+    while (true) {
+        cout << "\n1. View My Transcript\n2. Enroll in a Course\n3. View All Courses\n4. Update My Info\n5. Logout\n\n";
+        cout << "Enter your choice: ";
+        getline(cin, choiceInput);
+        if (!NegativeNumberValidation(choiceInput)) {
+            cout << "You can't enter a negative number" << endl;
+            continue;
+        }
+        if (choiceInput.empty()) {
+            cout << "Please choose a number from 1 to 5";
+            continue;
+        }
+        choice = choiceInput[0] - '0';
+        switch (choice) {
+        case 1:
+            generateTranscript();
+            break;
+        case 2:
+            enrollCourse(studentID);
+            break;
+        case 3:
+            viewCourses();
+            break;
+        case 4:
+            updateStudent();
+            break;
+        case 5:
+            loggedInStudentID = ""; // reset current logged in student on logout
+            return;
+        default:
+            cout << "Please choose a number from 1 to 5";
+            break;
+        }
+    }
+}
+
+void adminMenu() {
+    int choice;
+    string choiceInput;
+    while (true) {
+        cout << "\n=== Admin Menu ===";
+        cout << "\n1. Student Management\n2. Course Management\n3. Grades Management\n4. Logout\n\n";
+        cout << "Enter your choice: ";
+        getline(cin, choiceInput);
+        if (!NegativeNumberValidation(choiceInput)) {
+            cout << "You can't enter a negative number" << endl;
+            continue;
+        }
+        if (choiceInput.empty()) {
+            cout << "Please choose a number from 1 to 4";
+            continue;
+        }
+        choice = choiceInput[0] - '0';
+        switch (choice) {
+        case 1:
+            studentManagement();
+            break;
+        case 2:
+            courseManagement();
+            break;
+        case 3:
+            gradesManagement();
+            break;
+        case 4:
+            return;
+        default:
+            cout << "Please choose a number from 1 to 4";
+            break;
+        }
+    }
+}
+
+void loginScreen() {
+    int choice;
+    string choiceInput;
+    string username, password;
+    int index;
+
+    while (true) {
+        cout << "\n1. Login\n2. Register as Student\n3. Exit\n\n";
+        cout << "Enter your choice: ";
+        getline(cin, choiceInput);
+        if (!NegativeNumberValidation(choiceInput)) {
+            cout << "You can't enter a negative number" << endl;
+            continue;
+        }
+        if (choiceInput.empty()) {
+            cout << "Please choose a number from 1 to 3";
+            continue;
+        }
+        choice = choiceInput[0] - '0';
+        switch (choice) {
+        case 1:
+            cout << "Enter Username: ";
+            getline(cin, username);
+            cout << "Enter Password: ";
+            getline(cin, password);
+            index = findUserByUsername(username); // boolean search if user exists
+            if (index == -1) {
+                cout << "Username not found" << endl;
+                continue;
+            }
+            if (users[index].Password != password) {
+                cout << "Incorrect password" << endl;
+                continue;
+            }
+            if (users[index].isAdmin) {
+                cout << "Welcome, Admin!" << endl;
+                adminMenu();
+            }
+            else {
+                cout << "Welcome, " << users[index].Username << "!" << endl;
+                studentMenu(users[index].StudentID); // sends to student menu, saves ID globally to be used instead of manual entry
+            }
+            break;
+        case 2:
+            cout << "\n=== Student Registration ===" << endl;
+            if (UserCount >= MaxStudents + 1) {
+                cout << "The maximum number of users has been reached" << endl;
+                break;
+            }
+            AddStudent();
+            username = students[StudentCount - 1].ID + "@eng.asu.edu.eg";
+            cout << "Your username is: " << username << endl;
+            while (true) {
+                cout << "Set your password: ";
+                getline(cin, password);
+                if (validatePassword(password)) {
+                    break;
+                }
+                cout << "Password must be more than 8 characters, contain at least one uppercase letter and one number" << endl;
+            }
+            users[UserCount].Username = username;
+            users[UserCount].Password = password;
+            users[UserCount].StudentID = students[StudentCount - 1].ID;
+            users[UserCount].isAdmin = false;
+            UserCount++;
+            saveUsers();
+            cout << "Registration successful! Please login to continue." << endl;
+            break;
+        case 3:
+            cout << "Goodbye!" << endl;
+            return;
+        default:
+            cout << "Please choose a number from 1 to 3";
+            break;
+        }
+    }
+}
+
 
 int main() {
 
     loadStudents(); // <-- auto-load saved students on startup
     loadGrades();
     loadCourses();
+    loadUsers();
 
     cout << char(201);
     for (int i = 0; i < 36; i++) {
@@ -1681,41 +2047,6 @@ int main() {
     }cout << char(188) << endl << endl;
 
 
-    string ChoiceInput;
-    int choice;
-    while (true) {
-        cout << "1. Student Management" << endl;
-        cout << "2. Course Management" << endl;
-        cout << "3. Grades Management" << endl;
-        cout << "4. Exit" << endl;
-        cout << "\nEnter your choice: ";
-        getline(cin, ChoiceInput);
-        if (!NegativeNumberValidation(ChoiceInput)) {
-            cout << "You can't enter a negative number" << endl;
-            continue;
-        }
-        if (ChoiceInput.empty()) {
-            cout << "Please choose a number from 1 to 4\n\n";
-            continue;
-        }
-        choice = ChoiceInput[0] - '0';
-
-        switch (choice) {
-        case 1:
-            studentManagement();
-            break;
-        case 2:
-            courseManagement();
-            break;
-        case 3:
-            gradesManagement();
-            break;
-        case 4:
-            cout << "Goodbye! " << endl;
-            return 0;
-        default:
-            cout << "Please choose a number from 1 to 4\n\n";
-            break;
-        }
-    }
+    loginScreen();
+    return 0;
 }

@@ -1,7 +1,37 @@
-2
+12
 CSE121
 Computer Programming Intro
 2
 PHM111
 Math
 3
+CSE141
+Data Structures
+3
+CSE211
+Algorithms
+4
+CSE231
+Operating Systems
+3
+CSE251
+Database Systems
+4
+CSE311
+Computer Networks
+3
+CSE321
+Software Engineering
+2
+CCE201
+Digital Logic Design
+4
+CCE301
+Microprocessors
+3
+MCT211
+Control Systems
+2
+MCT301
+Robotics
+4

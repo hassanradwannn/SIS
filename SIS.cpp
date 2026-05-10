@@ -7,7 +7,7 @@ using namespace std;
 
 const int MaxStudents = 200;
 const int MaxCourses = 50;
-const int MaxGrades = 500;
+const int MaxGrades = 5000;
 
 int year = 2026;
 
@@ -899,6 +899,52 @@ int countStudentCourses(string StudentID) {
     return count;
 }
 
+void displayStudentEnrolledCourses(string StudentID) {
+    int enrolledCourseCount = countStudentCourses(StudentID);
+    const int enrolledCoursesTableWidth = 83;
+
+    cout << "\nCurrently Enrolled Courses: " << enrolledCourseCount << endl;
+    cout << (char)201;
+    for (int i = 0; i < enrolledCoursesTableWidth; i++) cout << (char)205;
+    cout << (char)187 << endl;
+
+    cout << (char)186 << " " << left << setw(10) << "Code"
+        << " " << (char)186 << " " << setw(25) << "Course"
+        << " " << (char)186 << " " << setw(7) << "Credits"
+        << " " << (char)186 << " " << setw(8) << "Midterm"
+        << " " << (char)186 << " " << setw(8) << "Final"
+        << " " << (char)186 << " " << setw(8) << "Total" << " " << (char)186 << endl;
+
+    cout << (char)204;
+    for (int i = 0; i < enrolledCoursesTableWidth; i++) cout << (char)205;
+    cout << (char)185 << endl;
+
+    if (enrolledCourseCount == 0) {
+        cout << (char)186 << " " << left << setw(enrolledCoursesTableWidth - 1) << "No courses enrolled for this student" << (char)186 << endl;
+    }
+    else {
+        for (int i = 0; i < GradeCount; i++) {
+            if (grades[i].StudentID == StudentID) {
+                int courseIndex = findByCourseCode(grades[i].CourseCode);
+                string courseName = courseIndex == -1 ? "Unknown Course" : courses[courseIndex].Name;
+                int credits = courseIndex == -1 ? 0 : courses[courseIndex].Credits;
+                if (courseName.size() > 25) courseName = courseName.substr(0, 25);
+
+                cout << (char)186 << " " << left << setw(10) << grades[i].CourseCode
+                    << " " << (char)186 << " " << setw(25) << courseName
+                    << " " << (char)186 << " " << setw(7) << credits
+                    << " " << (char)186 << " " << setw(8) << fixed << setprecision(1) << grades[i].Midterm
+                    << " " << (char)186 << " " << setw(8) << grades[i].Final
+                    << " " << (char)186 << " " << setw(8) << grades[i].Total << " " << (char)186 << endl;
+            }
+        }
+    }
+
+    cout << (char)200;
+    for (int i = 0; i < enrolledCoursesTableWidth; i++) cout << (char)205;
+    cout << (char)188 << endl;
+}
+
 int getMaxCourseLoad(double GPA) {
     if (GPA > 0.0 && GPA < 2.0) {
         return 5;
@@ -1194,6 +1240,12 @@ void enterGrades() {
         break;
     }
 
+    displayStudentEnrolledCourses(studentID);
+    if (countStudentCourses(studentID) == 0) {
+        cout << "This student is not enrolled in any courses" << endl;
+        return;
+    }
+
     while (true) {
         cout << "Enter Course Code: ";
         getline(cin, courseCode);
@@ -1204,6 +1256,10 @@ void enterGrades() {
         indexcrs = findByCourseCode(courseCode);
         if (indexcrs == -1) {
             cout << "Course Not Found" << endl;
+            continue;
+        }
+        if (findGrade(studentID, courseCode) == -1) {
+            cout << "Student is not enrolled in this course" << endl;
             continue;
         }
         break;

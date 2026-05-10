@@ -1311,6 +1311,7 @@ void generateTranscript() {
                 int courseIndex = findByCourseCode(grades[i].CourseCode);
                 string courseName = courseIndex == -1 ? "Unknown Course" : courses[courseIndex].Name;
                 int credits = courseIndex == -1 ? 0 : courses[courseIndex].Credits;
+                if (courseName.size() > 25) courseName = courseName.substr(0, 25);
 
                 cout << (char)186 << " " << left << setw(10) << grades[i].CourseCode
                     << " " << (char)186 << " " << setw(25) << courseName

@@ -873,7 +873,7 @@ int findByCourseCode(string CourseCode) {
     return -1;
 }
 
-bool uniqueCourseCode(string Code) {
+bool isUniqueCourseCode(string Code) {
     for (int i = 0; i < CourseCount; i++)
         if (courses[i].Code == Code)
             return false;
@@ -989,20 +989,20 @@ int inputNumberInRange(int start, int end) {
 void addCourse() {
     cout << "\n=== Add Course ===" << endl;
     if (CourseCount >= MaxCourses) {
-        cout << "The maximum number of courses has been reached ";
+        cout << "Course limit reached.\n";
         return;
     }
 
     Course c;
 
     while (true) {
-        cout << "Enter Course Code: ";
+        cout << "Enter Course Code (e.g CSE101): ";
         getline(cin, c.Code);
         if (!validateCourseCode(c.Code)) {
-            cout << "Course Code must be in form of LLLXXX, like CSE141" << endl;
+            cout << "Invalid format! Use 3 letters followed by 3 digits. like CSE141" << endl;
             continue;
         }
-        if (!uniqueCourseCode(c.Code)) {
+        if (!isUniqueCourseCode(c.Code)) {
             cout << "This Course Code already exists" << endl;
             continue;
         }
@@ -1023,12 +1023,11 @@ void addCourse() {
 
     courses[CourseCount] = c;
     CourseCount++;
-
-    saveCourses();
-
     cout << "\nCourse added successfully!\n";
     cout << "Course Code: " << c.Code << endl;
     cout << "Course Name: " << c.Name << endl;
+
+    saveCourses();
 }
 
 void viewCourses() {
@@ -1097,8 +1096,9 @@ void updateCourse() {
     }
 
     while (true) {
+        cout << "Choose Field to Update: " << endl;
         cout << "\n1. Course Name\n2. Credits\n0. Back" << endl;
-        cout << "Enter field you want to update: ";
+        cout << "Enter choice: " << endl;
         getline(cin, input);
 
         if (!NegativeNumberValidation(input)) {
@@ -1776,7 +1776,7 @@ void studentManagement() {
 
 }
 
-void courseManagement() {
+void courseMenu() {
     int choice;
     string choiceInput;
     while (true) {
@@ -1988,7 +1988,7 @@ void adminMenu() {
             studentManagement();
             break;
         case 2:
-            courseManagement();
+            courseMenu();
             break;
         case 3:
             gradesManagement();

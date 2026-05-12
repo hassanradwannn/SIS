@@ -1,0 +1,10 @@
+3
+MDP182
+Manufacturing Processes 
+2
+PHM112
+Mathematics (2)
+3
+PHM122
+Electricity and Magnetism 
+3

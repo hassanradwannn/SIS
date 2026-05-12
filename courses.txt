@@ -1,4 +1,4 @@
-12
+14
 CSE121
 Computer Programming Intro
 2
@@ -35,3 +35,9 @@ Control Systems
 MCT301
 Robotics
 4
+CSE111
+SYSTEM ENGINEERING
+3
+MDP182
+Manf
+2

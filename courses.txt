@@ -1,4 +1,4 @@
-12
+14
 CSE121
 Computer Programming Intro
 2
@@ -35,3 +35,9 @@ Control Systems
 MCT301
 Robotics
 4
+MDP182
+Manufacturing Processes 
+2
+MDP151
+Engineering Materials
+3
